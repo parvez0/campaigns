@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const logger = require('@grokker/logger');
-const { Users } = require('./mongo');
+const { Users, Session, mongoose } = require('./mongo');
 
 /*
  * RandomString function will create a random alpha numeric string to be used as JWT Secret
@@ -18,11 +18,16 @@ const randomString = (length = 20) => {
 // Setting the JWT Secret to global config if it is not provided
 config.JWT.SECRET = config.JWT.SECRET || randomString();
 
-const generateJWT = (userDetails) => {
+const generateJWT = async (userDetails) => {
+    const userId = userDetails._doc._id;
     delete userDetails._doc.password;
     delete userDetails._doc.saltToken;
     delete userDetails._doc._id;
-    return jwt.sign({ userDetails }, config.JWT.SECRET, { expiresIn: config.JWT.EXPIRY_TIME || 86400 });
+    const sessionId = mongoose.Types.ObjectId();
+    const token = jwt.sign({ ...userDetails._doc, sessionId }, config.JWT.SECRET, { expiresIn: config.JWT.EXPIRY_TIME || 86400 });
+    const session = new Session({ userId, token, _id: sessionId });
+    await session.save();
+    return token;
 }
 
 const verifyUser = async (usernameOrEmail, password) => {
@@ -58,7 +63,25 @@ const signup = async ({ username, email, password }) => {
     }
 }
 
+const logout = async (sessionId) => {
+    try{
+        const sessionDetails = await Session.findOne({ _id: sessionId });
+        if(!sessionDetails){
+            logger.warn(`Illegal access by user ${email} session details not found`);
+            return Promise.resolve();
+        }
+        sessionDetails.active = false;
+        sessionDetails.updatedTime = new Date().toISOString();
+        await sessionDetails.save();
+        delete localCache[sessionDetails._doc._id];
+    }catch (e) {
+        logger.error(`Failed to logout user ${user} -`, e);
+        return Promise.reject(new customError('Failed to logout, please try again.', 500));
+    }
+}
+
 module.exports = {
     verifyUser,
-    signup
+    signup,
+    logout
 }

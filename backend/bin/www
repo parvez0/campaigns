@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 
 /**
+ * A small in memory cache for storing the active tokens for session based authentication
+ * { sessionId: { updatedTime: Date.toISOString(), createdTime: Date } }
+ * Deleting the keys which are inactive for more that 10 minutes
+ */
+global.localCache = {};
+
+/**
  * Register configFile to global variable for easy access
  */
 const configFile = require('../config');

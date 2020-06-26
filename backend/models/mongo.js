@@ -19,6 +19,15 @@ logger.info(`Generated mongodb uri : ${mongodbConnectionUri}`);
     }
 })();
 
+const sessionSchema = new Schema({
+   userId: { type: String, required: true },
+   token: { type: String, required: true },
+   active: { type: Boolean, default: true },
+   createdDate: { type: Date, default: Date.now() }
+});
+
+sessionSchema.index({ _id: 1, active: 1 });
+
 const usersSchema = new Schema({
    username: { type: String, required: true, index: { unique: true } },
    password: { type: String },
@@ -49,7 +58,10 @@ usersSchema.methods.verifyPassword = function (password){
 usersSchema.index({ username: 1, status: 1 });
 
 const Users = Model('users', usersSchema);
+const Session = Model('sessions', sessionSchema);
 
 module.exports = {
     Users,
+    Session,
+    mongoose
 }

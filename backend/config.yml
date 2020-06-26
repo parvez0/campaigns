@@ -6,4 +6,7 @@ MONGODB:
 JWT:
   EXPIRY_TIME: 86400  # In seconds, default 24 hours
   SECRET: "iLFwO0exwQTwJUBdgaGGRKt3T"
+DOCKER:
+  MANAGER_URL:
+  AUTHENTICATION_KEY:
 

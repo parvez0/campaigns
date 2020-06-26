@@ -7,8 +7,8 @@ module.exports = (req, res, next) => {
       /*
        * Adding token as a cookie
        */
-      if(name && value){
-          res.cookie(name, value);
+      if(cookie.name && cookie.value){
+          res.cookie(cookie.name, cookie.value);
       }
       return res.status(statusCode).json({
           success,
