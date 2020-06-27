@@ -1,8 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const logger = require('@grokker/logger');
+const path = require('path');
+
+const multer = require('multer');
 const auth = require('../middlewares/auth');
-const { verifyUser, signup, logout } = require('../models/index');
+const { verifyUser, signup, logout, createJobProfile } = require('../models/index');
+
+const multerStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, path.join(__dirname, '/../assets'));
+    },
+    filename: (req, file, cb) => {
+        const originalFile = file.originalname && file.originalname.toLowerCase().replace(/ |\_|\-/ig, '') || `${req.userId}.csv`;
+        const fileName = originalFile.split('.')[0];
+        const extension = originalFile.split('.')[1];
+        cb(null, fileName + '_' + Date.now() + '.' + extension);
+    }
+});
+
+const uploadHandler = multer({ storage: multerStorage });
 
 router.post('/login', async (req, res) => {
     try{
@@ -44,6 +60,15 @@ router.post('/logout', auth, async (req, res) => {
 
 router.get('/verify-auth', auth, async (req, res) => {
     return res.publish(true, 'Success', { message: 'auth working' });
-})
+});
+
+router.post('/file-upload', auth, uploadHandler.single('audienceFile'), async (req, res) => {
+    try{
+        await createJobProfile(req.file, req.userId, req.user);
+        res.publish(true, 'Success', { message: `File uploaded successfully, worker will be assigned shortly for pushing data to the database` }, 201);
+    }catch (e) {
+        res.publish(false, 'Failed', { message: `File uploaded successfully, but there was a problem while creating a worker please try again` }, 422);
+    }
+});
 
 module.exports = router;

@@ -1,4 +1,4 @@
-const logger = require('@grokker/logger');
+
 logger.info(`Registering generic response handler to response object`);
 
 // Generic response handler

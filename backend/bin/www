@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 
 /**
+ * Custom logger setting it to global variable
+ */
+global.logger = require('../logger');
+
+/**
  * A small in memory cache for storing the active tokens for session based authentication
  * { sessionId: { updatedTime: Date.toISOString(), createdTime: Date } }
  * Deleting the keys which are inactive for more that 10 minutes
@@ -19,12 +24,17 @@ global.config = configFile;
 global.customError = require('../middlewares/customErrorMessage');
 
 /**
+ * Executing cron files
+ */
+require('../models/cron');
+
+/**
  * Module dependencies.
  */
 const app = require('../app');
 const debug = require('debug')('backend:server');
 const http = require('http');
-const logger = require('@grokker/logger');
+
 
 /**
  * Get port from environment and store in Express.

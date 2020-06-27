@@ -1,11 +1,12 @@
 const jwt = require('jsonwebtoken');
-const logger = require('@grokker/logger');
+
 const { Session } = require('../models/mongo');
 
 // Middle for authenticating the server based on valid jwt token
 module.exports = async (req, res, next) => {
     try{
-        const token = req.cookies.XID || req.headers.authorization;
+        let token = req.cookies.XID || req.headers.authorization;
+        token = token && token.startsWith('Bearer ') ? token.slice(7, ) : token;
         if(!token){
             return res.publish(false, 'Failed', { message: 'Unauthorized !!' }, 401);
         }
@@ -15,6 +16,7 @@ module.exports = async (req, res, next) => {
          */
         req.user = details.email;
         req.sessionId = details.sessionId;
+        req.userId = details.userId;
         if(!localCache[details.sessionId]){
             const sessionDetails = await Session.findOne({ _id: details.sessionId, active: true });
             if(!sessionDetails){

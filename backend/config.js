@@ -1,6 +1,6 @@
 const yaml = require('yaml');
 const fs = require('fs');
-const logger = require('@grokker/logger');
+
 
 let filePath = process.env.CONFIG_FILE_PATH || `${__dirname}/config.yml`;
 let configFile = null;

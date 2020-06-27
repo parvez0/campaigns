@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
-const logger = require('@grokker/logger');
-const { Users, Session, mongoose } = require('./mongo');
+
+const path = require('path');
+const { Users, Session, mongoose, Jobs } = require('./mongo');
 
 /*
  * RandomString function will create a random alpha numeric string to be used as JWT Secret
@@ -24,7 +25,7 @@ const generateJWT = async (userDetails) => {
     delete userDetails._doc.saltToken;
     delete userDetails._doc._id;
     const sessionId = mongoose.Types.ObjectId();
-    const token = jwt.sign({ ...userDetails._doc, sessionId }, config.JWT.SECRET, { expiresIn: config.JWT.EXPIRY_TIME || 86400 });
+    const token = jwt.sign({ ...userDetails._doc, sessionId, userId }, config.JWT.SECRET, { expiresIn: config.JWT.EXPIRY_TIME || 86400 });
     const session = new Session({ userId, token, _id: sessionId });
     await session.save();
     return token;
@@ -80,8 +81,27 @@ const logout = async (sessionId) => {
     }
 }
 
+const createJobProfile = async (fileObject, userId, user) => {
+    try{
+        const id = mongoose.Types.ObjectId();
+        const jobProfile = new Jobs({
+            _id: id,
+            accountId: userId,
+            jobName: `${fileObject.filename}_audience_upload`,
+            status: `pending`,
+            jobArgs: [`${path.join(__dirname, '../workers/fileUpload.js')}`, fileObject.path, id, userId]
+        });
+        await jobProfile.save();
+        logger.info(`Job profile created for file ${fileObject.filename}`);
+    }catch (e) {
+        logger.error(`Failed to create jobProfile for user ${user} - and file ${fileObject.filename} -`, e);
+        return Promise.reject(new Error('Failed to create jobProfile'));
+    }
+}
+
 module.exports = {
     verifyUser,
     signup,
-    logout
+    logout,
+    createJobProfile
 }
