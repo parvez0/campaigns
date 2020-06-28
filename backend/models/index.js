@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
-
 const path = require('path');
 const { Users, Session, mongoose, Jobs } = require('./mongo');
+
+const workerType = config.WORKER_TYPE;
 
 /*
  * RandomString function will create a random alpha numeric string to be used as JWT Secret
@@ -81,7 +82,19 @@ const logout = async (sessionId) => {
     }
 }
 
-const createJobProfile = async (fileObject, userId, user) => {
+const getJobArgs = (fileObject, id, userId) => {
+    let args = [];
+    switch (workerType) {
+        case 'docker':
+            args = ['/app/workers/fileUpload.js', `/app/assets/${fileObject.filename}`, id, userId];
+            break;
+        default:
+            args = [`${path.join(__dirname, '../workers/fileUpload.js')}`, fileObject.path, id, userId];
+    }
+    return args;
+}
+
+const createFileUploadJobProfile = async (fileObject, userId, user) => {
     try{
         const id = mongoose.Types.ObjectId();
         const jobProfile = new Jobs({
@@ -89,7 +102,8 @@ const createJobProfile = async (fileObject, userId, user) => {
             accountId: userId,
             jobName: `${fileObject.filename}_audience_upload`,
             status: `pending`,
-            jobArgs: [`${path.join(__dirname, '../workers/fileUpload.js')}`, fileObject.path, id, userId]
+            jobArgs: getJobArgs(fileObject, id, userId),
+            jobType: `fileupload`
         });
         await jobProfile.save();
         logger.info(`Job profile created for file ${fileObject.filename}`);
@@ -103,5 +117,5 @@ module.exports = {
     verifyUser,
     signup,
     logout,
-    createJobProfile
+    createFileUploadJobProfile
 }

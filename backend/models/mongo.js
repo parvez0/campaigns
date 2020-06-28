@@ -70,9 +70,10 @@ const jobsSchema = new Schema({
    status: { type: String, required: true },
    jobName: { type: String },
    jobArgs: { type: Array, required: true },
+   jobType: { type: String, required: true },
    comment: { type: String },
    retried: { type: Number },
-   workerId: { type: Number },
+   workerId: { type: String },
    accountId: { type: String, required: true }
 });
 

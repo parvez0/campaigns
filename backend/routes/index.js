@@ -4,7 +4,7 @@ const path = require('path');
 
 const multer = require('multer');
 const auth = require('../middlewares/auth');
-const { verifyUser, signup, logout, createJobProfile } = require('../models/index');
+const { verifyUser, signup, logout, createFileUploadJobProfile } = require('../models/index');
 
 const multerStorage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -64,7 +64,7 @@ router.get('/verify-auth', auth, async (req, res) => {
 
 router.post('/file-upload', auth, uploadHandler.single('audienceFile'), async (req, res) => {
     try{
-        await createJobProfile(req.file, req.userId, req.user);
+        await createFileUploadJobProfile(req.file, req.userId, req.user);
         res.publish(true, 'Success', { message: `File uploaded successfully, worker will be assigned shortly for pushing data to the database` }, 201);
     }catch (e) {
         res.publish(false, 'Failed', { message: `File uploaded successfully, but there was a problem while creating a worker please try again` }, 422);

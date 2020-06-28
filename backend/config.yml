@@ -1,13 +1,31 @@
 MONGODB:
   # Complete mongodb uri with authentication and arguments will be appended to uri as query parameters
-  URI: "mongodb://localhost:27017"
+  URI: "mongodb://192.168.1.104:27017"
   ARGUMENTS: ""
   DATABASE: "campaigns"
 JWT:
-  EXPIRY_TIME: 86400  # In seconds, default 24 hours
+  # In seconds, default 24 hours
+  EXPIRY_TIME: 86400
   SECRET: "iLFwO0exwQTwJUBdgaGGRKt3T"
-IN_MEMORY_CACHE_EXPIRY: 3 # In minutes, default to 3 minutes
+# In minutes, default to 3 minutes
+IN_MEMORY_CACHE_EXPIRY: 3
+# default, @options <<docker, childProcess>>
+WORKER_TYPE: 'docker'
 DOCKER:
-  MANAGER_URL:
-  AUTHENTICATION_KEY:
+  # default localhost, docker manager's url
+  HOST: 127.0.0.1
+  # default 2375
+  PORT: 1234
+  # default false, required for tls based authentication
+  TLS_VERIFY: false
+  CA: 'path/to/file/ca.pem'
+  CERT: 'path/to/file/cert.pem'
+  KEY: 'path/to/file/key.pem'
+  # Volume point connected to master process
+  ASSETS_HOST_PATH: /Users/parvez/Private/campaigns/backend/assets
+  # Fetch worker logs and show it on master process
+  FETCH_LOGS_FROM_WORKER: false
+  # default '', network of docker container
+  WORKER_NETWORK: my-network
+  WORKER_IMAGE:
 

@@ -1,6 +1,7 @@
 const LEVELS = { 'ERROR': 1, 'WARN': 2, 'INFO': 3, 'DEBUG' : 4 };
 const ENV_LOG_LEVEL = process.env.LOGGER_LOG_LEVEL && LEVELS[process.env.LOGGER_LOG_LEVEL] ? process.env.LOGGER_LOG_LEVEL : 'INFO';
 const LOG_LEVEL = LEVELS[ENV_LOG_LEVEL];
+const LOGGER_WORKER = process.env.LOGGER_WORKER || process.pid;
 
 console.log('[ LOGGER ] Active Log Level : ', ENV_LOG_LEVEL);
 
@@ -34,7 +35,7 @@ const info = (...args) => {
         formattedArgs.push(typeof arg === 'string' ? arg : JSON.stringify(arg));
     });
     if(LOG_LEVEL - 3 >= 0){
-        console.info(new Date().toISOString(), '\x1b[32m', ` INFO  `, '\x1b[0m', `[ ${process.pid} ]`, `--- [   ${_getCallerFile()}   ] : `, ...formattedArgs);
+        console.info(new Date().toISOString(), '\x1b[32m', ` INFO  `, '\x1b[0m', `[ ${LOGGER_WORKER} ]`, `--- [   ${_getCallerFile()}   ] : `, ...formattedArgs);
     }
 };
 
@@ -59,7 +60,7 @@ const error = (...args) => {
         formattedArgs = args;
     }
     if(LOG_LEVEL - 1 >= 0) {
-        console.info(new Date().toISOString(), '\x1b[31m', ` ERROR `, `[ ${process.pid} ]`, '\x1b[0m', `--- [   ${_getCallerFile()}   ] : `, ...formattedArgs);
+        console.info(new Date().toISOString(), '\x1b[31m', ` ERROR `, `[ ${LOGGER_WORKER} ]`, '\x1b[0m', `--- [   ${_getCallerFile()}   ] : `, ...formattedArgs);
     }
 };
 
@@ -69,13 +70,13 @@ const warn = (...args) => {
         formattedArgs.push(typeof arg === 'string' ? arg : JSON.stringify(arg));
     });
     if(LOG_LEVEL - 2 >= 0){
-        console.info(new Date().toISOString(), '\x1b[33m', ` WARN  `, `[ ${process.pid} ]`,'\x1b[0m',`--- [   ${_getCallerFile()}   ] : `, ...formattedArgs);
+        console.info(new Date().toISOString(), '\x1b[33m', ` WARN  `, `[ ${LOGGER_WORKER} ]`,'\x1b[0m',`--- [   ${_getCallerFile()}   ] : `, ...formattedArgs);
     }
 };
 
 const debug = (...args) => {
     if(LOG_LEVEL - 4 >= 0){
-        console.info(new Date().toISOString(), '\x1b[34m', ` DEBUG `, '\x1b[0m', `[ ${process.pid} ]` ,`--- [   ${_getCallerFile()}   ] : `, ...args);
+        console.info(new Date().toISOString(), '\x1b[34m', ` DEBUG `, '\x1b[0m', `[ ${LOGGER_WORKER} ]` ,`--- [   ${_getCallerFile()}   ] : `, ...args);
     }
 };
 

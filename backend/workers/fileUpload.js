@@ -1,22 +1,24 @@
-global.config = require('../config');
 global.logger = require('../logger');
+global.config = require('../config');
 const readLine = require('readline');
 const path = require('path');
-const { Audience, Jobs } = require('../models/mongo');
+const { Audience, Jobs, mongoose } = require('../models/mongo');
 
 const fs = require('fs');
 
 const startWorker = async (fileName, jobId, uid) => {
     const document = await Audience.find({ jobId: jobId }).sort({ rowId : -1 }).limit(1);
-    const jobDetails = await Jobs.findOne({ _id: jobId });
+    let jobDetails = await Jobs.findOne({ _id: jobId });
     if(!jobDetails){
-        logger.error(`JobDetials for jobId ${jobId} and file ${fileName} doesn't exits`);
+        logger.error(`JobDetails for jobId ${jobId} and file ${fileName} doesn't exits`);
         process.exit(1);
     }
     try{
         if(!fs.existsSync(path.resolve(fileName))){
             throw new Error(`No such file ${fileName} doesn't exits`);
         }
+        jobDetails.status = 'running';
+        jobDetails = await jobDetails.save();
         /**
          * Checking for any last failed job for this file
          */
@@ -58,7 +60,8 @@ const startWorker = async (fileName, jobId, uid) => {
         }).on('close', async () => {
             jobDetails.status = 'completed';
             await jobDetails.save();
-            logger.info(`File ${fileName} uploaded successfully`);
+            logger.info(`File ${fileName} uploaded successfully, exiting the process gracefully`);
+            process.exit();
         });
     }catch (e) {
         /**

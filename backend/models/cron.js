@@ -1,9 +1,15 @@
 const CronJob = require('cron').CronJob;
 const spawn = require('child_process').spawn;
 const { Jobs } = require('./mongo');
+const { createContainer } = require('./docker');
 
-const workerType = config.WORKER_TYPE || 'childProcess';
+const workerType = config.WORKER_TYPE;
 
+/**
+ * @param processName {String}
+ * @param workerId {String}
+ * @returns {Promise<boolean>}
+ */
 const isRunning = async (processName, workerId) => {
     try{
         switch (workerType) {
@@ -11,7 +17,8 @@ const isRunning = async (processName, workerId) => {
                 break;
             default:
                 try {
-                    return process.kill(workerId, 0);
+                    const processId = Number(workerId);
+                    return process.kill(processId, 0);
                 }catch (e) {
                     logger.debug(`Process ${processName}_${workerId} is not running - ${e.code}`);
                     return false;
@@ -50,7 +57,7 @@ const clearInMemorySessionCache = () => {
     });
 }
 /**
- * @param job
+ * @param job {Object}
  * @returns {Promise<void>}
  * Functions create worker as child process or docker containers based on configuration settings
  * By default it will create a child process
@@ -59,19 +66,29 @@ const createWorker = async (job, retried = 0) => {
     try{
         switch (workerType){
             case 'docker':
+                logger.debug(`Creating a docker worker for job ${job._doc.jobName}`);
+                job.workerId = `${job.jobType}_${job._doc._id}`;
+                await createContainer(job.workerId, job.jobArgs);
+                job.status = 'scheduled';
+                job.retried = retried;
+                job.save();
                 break;
             default:
                 logger.debug(`Creating a child process for job ${job._doc.jobName}`);
                 const proc = spawn('node', job._doc.jobArgs);
                 proc.stdout.pipe(process.stdout);
                 proc.stderr.pipe(process.stderr);
-                job.status = 'running';
+                job.status = 'scheduled';
                 job.workerId = proc.pid;
                 job.retried = retried;
                 await job.save();
         }
     }catch (e) {
         logger.error(`Failed to create worker for job ${job._doc.jobName}_${job._doc._id} -`, e);
+        job.status = 'failed';
+        job.comment = 'Failed to create container - ' + e.message
+        job.retried = retried;
+        await job.save();
     }
 }
 
