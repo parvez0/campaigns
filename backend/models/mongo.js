@@ -26,7 +26,8 @@ const sessionSchema = new Schema({
    userId: { type: String, required: true },
    token: { type: String, required: true },
    active: { type: Boolean, default: true },
-   createdDate: { type: Date, default: Date.now() }
+   createdDate: { type: Date, default: Date.now() },
+   updatedDate: { type: Date, default: Date.now() }
 });
 
 sessionSchema.index({ _id: 1, active: 1 });
@@ -40,7 +41,8 @@ const usersSchema = new Schema({
    saltToken: { type: String },
    email: { type: String, index: { unique: true } },
    status: { type: String },
-   createdDate: { type: Date, default: Date.now() }
+   createdDate: { type: Date, default: Date.now() },
+   updatedDate: { type: Date, default: Date.now() }
 });
 
 usersSchema.methods.setPassword = function (password){
@@ -74,7 +76,9 @@ const jobsSchema = new Schema({
    comment: { type: String },
    retried: { type: Number },
    workerId: { type: String },
-   accountId: { type: String, required: true }
+   accountId: { type: String, required: true },
+   createdDate: { type: Date, default: Date.now() },
+   updatedDate: { type: Date }
 });
 
 jobsSchema.index({ accountId: 1 });
@@ -92,6 +96,8 @@ const audienceSchema = new Schema({
     email: { type: String },
     name: { type: String },
     tags: { type: Schema.Types.Array },
+    createdDate: { type: Date, default: Date.now() },
+    updatedDate: { type: Date, default: Date.now() }
 });
 
 audienceSchema.index({ accountId: 1 });

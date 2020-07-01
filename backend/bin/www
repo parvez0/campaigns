@@ -1,9 +1,28 @@
 #!/usr/bin/env node
+"use strict";
+
+/**
+ * @param o
+ * @returns {*}
+ * Freezes the Object to avoid further changes
+ */
+function deepFreeze(o) {
+  Object.freeze(o);
+  Object.getOwnPropertyNames(o).forEach(function(prop) {
+    if (o.hasOwnProperty(prop)
+        && o[prop] !== null
+        && (typeof o[prop] === "object" || typeof o[prop] === "function")
+        && !Object.isFrozen(o[prop])) {
+      deepFreeze(o[prop]);
+    }
+  });
+  return o;
+}
 
 /**
  * Custom logger setting it to global variable
  */
-global.logger = require('../logger');
+global.logger = deepFreeze(require('../logger'));
 
 /**
  * A small in memory cache for storing the active tokens for session based authentication
@@ -16,12 +35,12 @@ global.localCache = {};
  * Register configFile to global variable for easy access
  */
 const configFile = require('../config');
-global.config = configFile;
+global.config = deepFreeze(configFile);
 
 /**
  * Register custom error to global variable
  */
-global.customError = require('../middlewares/customErrorMessage');
+global.customError = deepFreeze(require('../middlewares/customErrorMessage'));
 
 /**
  * Executing cron files

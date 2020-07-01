@@ -1,19 +1,32 @@
 const CronJob = require('cron').CronJob;
 const spawn = require('child_process').spawn;
 const { Jobs } = require('./mongo');
-const { createContainer } = require('./docker');
+const { createContainer, fetchTasks, deleteWorker } = require('./docker');
 
 const workerType = config.WORKER_TYPE;
 
 /**
- * @param processName {String}
- * @param workerId {String}
+ * @param job {Object}
  * @returns {Promise<boolean>}
  */
-const isRunning = async (processName, workerId) => {
+const isRunning = async (job) => {
     try{
+        const workerId = job._doc.workerId;
+        const processName = job._doc.jobName;
         switch (workerType) {
             case 'docker':
+                try {
+                    const task = await fetchTasks(workerId);
+                    if(task && task.length > 0){
+                        job.comment = task[0].Status.State && task[0].Status.Err;
+                        job.retried = task.length;
+                        return true;
+                    }
+                    return false;
+                }catch (e) {
+                    logger.error(`Failed to verify the service running status - ${workerId} -`, e);
+                    return false;
+                }
                 break;
             default:
                 try {
@@ -71,7 +84,8 @@ const createWorker = async (job, retried = 0) => {
                 await createContainer(job.workerId, job.jobArgs);
                 job.status = 'scheduled';
                 job.retried = retried;
-                job.save();
+                job.updatedDate = new Date().toISOString();
+                await job.save();
                 break;
             default:
                 logger.debug(`Creating a child process for job ${job._doc.jobName}`);
@@ -81,6 +95,7 @@ const createWorker = async (job, retried = 0) => {
                 job.status = 'scheduled';
                 job.workerId = proc.pid;
                 job.retried = retried;
+                job.updatedDate = new Date().toISOString();
                 await job.save();
         }
     }catch (e) {
@@ -112,15 +127,24 @@ const executeJobs = async () => {
  */
 const verifyAllTheRunningJobs = async () => {
     try{
-        const runningJobs = await Jobs.find({"$or": [{ status: 'running'}, { status: 'failed' }]});
-        logger.debug(`Verifying running status of ${runningJobs.length} jobs`);
+        const runningJobs = await Jobs.find({"$or": [{ status: 'running'}, { status: 'failed' }, { status: 'scheduled' }]});
+        logger.debug(`Verifying running and schedule jobs status of ${runningJobs.length} jobs`);
         for(let i=0; i<runningJobs.length; i++){
             const job = runningJobs[i];
             try{
-                if(!await isRunning(job._doc.jobName, job._doc.workerId) && job._doc.retried < 3){
+                const updatedDate = job._doc.updatedDate && new Date(job._doc.updatedDate) || new Date();
+                const date = new Date();
+                let jobRunning = await isRunning(job);
+                if(job._doc.status === 'scheduled' && date - updatedDate > 59000){
+                    logger.info(`Deleting the worker ${job._doc.workerId} as this worker is in schedule state for more than 1 min`);
+                    await deleteWorker(job._doc.workerId);
+                    jobRunning = false;
+                }
+                if(!jobRunning && job._doc.retried < 3){
                     logger.debug(`Re-Starting job ${job._doc.jobName}_${job._doc._id}`);
                     await createWorker(job, job._doc.retried + 1);
                 }else if(job._doc.retried >= 3){
+                    logger.info(`Marking job ${job._doc.jobName} dead, it failed 3 times with comment - `, job._doc.comment);
                     job.status = 'dead';
                     await job.save();
                 }

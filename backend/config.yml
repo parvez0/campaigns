@@ -24,7 +24,7 @@ DOCKER:
   # Volume point connected to master process
   ASSETS_HOST_PATH: /Users/parvez/Private/campaigns/backend/assets
   # Fetch worker logs and show it on master process
-  FETCH_LOGS_FROM_WORKER: false
+  FETCH_LOGS_FROM_WORKER: true
   # default '', network of docker container
   WORKER_NETWORK: my-network
   WORKER_IMAGE:

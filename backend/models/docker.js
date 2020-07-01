@@ -1,12 +1,10 @@
 const DockerNode = require('dockerode');
 const fs = require('fs');
 const path = require('path');
-global.config = require('../config');
-global.logger = require('../logger');
 const dockerConfig = config.DOCKER;
 const workerImage = dockerConfig.WORKER_IMAGE;
 const workerNetwork = dockerConfig.WORKER_NETWORK || '';
-const assetsPath = dockerConfig.ASSETS_HOST_PATH || path.join(__dirname, '../assets')
+const assetsPath = dockerConfig.ASSETS_HOST_PATH || path.join(__dirname, '../assets');
 
 const options = {
     Promise: require('bluebird'),
@@ -81,21 +79,46 @@ const createContainer = async (workerId, jobArgs) => {
             }
         });
         logger.info(`Worker created ${workerId} -`, worker);
+        if(config.DOCKER.FETCH_LOGS_FROM_WORKER){
+            worker.logs({ follow: true, stdout: true, stderr: true }, (err, stream) => {
+                if(err){
+                    logger.error(`Failed to fetch the service logs for worker - ${workerId} -`, err);
+                }
+                stream.pipe(process.stdout);
+            });
+        }
     }catch (e) {
         logger.error(`Failed to create the container for ${workerId} :`, e);
         return Promise.reject('Failed to create container');
     }
 };
 
-const fetchServiceLogs = async () => {
+const fetchTasks = async (workerId) => {
     try{
-
+        const taskList = await dockerClient.listTasks({filters: JSON.stringify({"service":[workerId]}) });
+        return taskList;
     }catch (e) {
-
+        e = e.statusCode === 404 ? e.message : e;
+        logger.error(`Failed to fetch worker status for ${workerId} -`, e);
+        return Promise.resolve();
     }
 }
 
+const deleteWorker = async (workerId) => {
+    try {
+        const worker = await dockerClient.getService(workerId);
+        await worker.remove();
+    }catch (e) {
+        e = e.statusCode === 404 ? e.message : e;
+        logger.error(`Failed to delete worker for ${workerId} -`, e);
+        return Promise.resolve(`Failed to delete worker`);
+    }
+}
+
+
 // createContainer('nodeFileuploadworkerId', ['/app/workers/fileUpload.js', '/app/assets/audiencesheetsheet1_15932709979.csv', '5ef75e0662b9d5a3b4eb68db', '5ef318bd11d3e134150a16e7'])
 module.exports = {
-    createContainer
+    createContainer,
+    fetchTasks,
+    deleteWorker
 }
