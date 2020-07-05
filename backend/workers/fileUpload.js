@@ -2,9 +2,32 @@ global.logger = require('../logger');
 global.config = require('../config');
 const readLine = require('readline');
 const path = require('path');
-const { Audience, Jobs, mongoose } = require('../models/mongo');
+const memwatch = require('node-memwatch');
+const heapdump = require('heapdump');
+
+const { Audience, Jobs } = require('../models/mongo');
+
+memwatch.on('leak', (info) => {
+    logger.warn('Memory leak detected: ', info);
+    const filePath = process.env.HEAP_DUMP_FILE_PATH || `/app/assets/heapdump_${new Date().getMilliseconds()}.log`;
+    heapdump.writeSnapshot(filePath, (err, filename) => {
+        if (err) logger.error(err);
+        else logger.warn('Wrote snapshot: ' + filename);
+    })
+});
 
 const fs = require('fs');
+
+const pushBatch = (batch, currentLine) => {
+    return new Promise(resolve => {
+        Audience.insertMany(batch, (err) => {
+           if(err){
+               logger.error(`Failed to upload batch : ${currentLine - batch.length} - ${currentLine}`);
+           }
+           return resolve();
+        });
+    });
+}
 
 const startWorker = async (fileName, jobId, uid) => {
     const document = await Audience.find({ jobId: jobId }).sort({ rowId : -1 }).limit(1);
@@ -33,7 +56,11 @@ const startWorker = async (fileName, jobId, uid) => {
          * A stream file descriptor for reading a file line by line
          */
         const fd = readLine.createInterface({ input: fs.createReadStream(path.resolve(fileName)) });
-        fd.on('line', async (line) => {
+        let batch = [];
+        /**
+         * Reading synchronous lines from the descriptor
+         */
+        for await (let line of fd){
             try{
                 if(currentLine >= lastLine){
                     logger.debug(`Pushing line ${line}`);
@@ -42,27 +69,44 @@ const startWorker = async (fileName, jobId, uid) => {
                     * @headers : name, email, number, [tags]
                     */
                     const row = line.split(',');
-                    const doc = new Audience({
+                    let tags = row.slice(3).join(',');
+                    tags = tags && tags.replace(/\\|\\n|\"/ig, '').split(',');
+                    batch.push({
                         accountId: uid,
                         jobId: jobId,
                         rowId: `${fileName}_${currentLine}`,
                         name: row[0],
                         email: row[1],
                         number: row[2],
-                        tags: row.slice(3)
+                        tags: tags
                     });
-                    await doc.save();
                 }
-                currentLine++;
+                currentLine += 1;
+                logger.debug(`Current line :`, currentLine)
+                if(batch.length >= 100){
+                    logger.info(`Processing records : ${currentLine - batch.length} - ${currentLine}`);
+                    await pushBatch(batch, currentLine);
+                    batch = [];
+                }
             }catch (e) {
+                currentLine += 1;
                 logger.error(`Failed to push line ${line} :`, e);
             }
-        }).on('close', async () => {
-            jobDetails.status = 'completed';
-            await jobDetails.save();
-            logger.info(`File ${fileName} uploaded successfully, exiting the process gracefully`);
-            process.exit();
-        });
+        }
+        /**
+         * This will process any leftOver records
+         */
+        if(batch.length){
+            logger.info(`Processing records : ${currentLine - batch.length} - ${currentLine}`);
+            await pushBatch(batch, currentLine);
+        }
+        /**
+         * Changing the status of the job to completed after successful db insert
+         */
+        jobDetails.status = 'completed';
+        await jobDetails.save();
+        logger.info(`File ${fileName} uploaded successfully, exiting the process gracefully`);
+        process.exit();
     }catch (e) {
         /**
          * Comment will contains the error message in case of failure

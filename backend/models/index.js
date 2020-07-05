@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const readLine = require('readline');
+const fs = require('fs');
 const { Users, Session, mongoose, Jobs } = require('./mongo');
 
 const workerType = config.WORKER_TYPE;
@@ -113,9 +115,49 @@ const createFileUploadJobProfile = async (fileObject, userId, user) => {
     }
 }
 
+const verifyUploadedFile = async (filePath) => {
+    try{
+        return new Promise((resolve, reject) => {
+            const fd = readLine.createInterface({ input: fs.createReadStream(path.resolve(filePath)) });
+            const actualRows = ['name', 'email', 'number', 'tags'];
+            let fileValid = true;
+            fd.on('line', line => {
+                const row = line.split(',');
+                if(actualRows.length > row.length){
+                    fileValid = false;
+                    fd.close();
+                    fd.removeAllListeners();
+                    return;
+                }
+                for(let i=0; i < actualRows.length; i++){
+                    if(actualRows[i] !== row[i].trim()){
+                        fileValid = false;
+                        fd.close();
+                        fd.removeAllListeners()
+                        return;
+                    }
+                }
+                fd.close();
+                fd.removeAllListeners()
+                return;
+            }).on('close', () => {
+                if(fileValid){
+                    return resolve();
+                }else{
+                    return reject(new customError(`Invalid header format, please verify that csv file is in this format ${actualRows.join(',')}`, 400));
+                }
+            });
+        })
+    }catch (e) {
+        logger.error(`Failed to verify file ${filePath} -`, e);
+        return Promise.reject(new customError('Failed to create jobProfile', 422));
+    }
+}
+
 module.exports = {
     verifyUser,
     signup,
     logout,
-    createFileUploadJobProfile
+    createFileUploadJobProfile,
+    verifyUploadedFile
 }

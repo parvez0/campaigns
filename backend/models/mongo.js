@@ -95,13 +95,13 @@ const audienceSchema = new Schema({
     number: { type: String },
     email: { type: String },
     name: { type: String },
-    tags: { type: Schema.Types.Array },
+    tags: { type: Array },
     createdDate: { type: Date, default: Date.now() },
     updatedDate: { type: Date, default: Date.now() }
 });
 
 audienceSchema.index({ accountId: 1 });
-audienceSchema.index({ jobId: 1 });
+audienceSchema.index({ jobId: - 1 });
 audienceSchema.index({ accountId: 1, tags: 1 });
 audienceSchema.index({ accountId: 1, rowId: -1 });
 

@@ -9,7 +9,7 @@ JWT:
   SECRET: "iLFwO0exwQTwJUBdgaGGRKt3T"
 # In minutes, default to 3 minutes
 IN_MEMORY_CACHE_EXPIRY: 3
-# default, @options <<docker, childProcess>>
+# default childProcess, @options <<docker, childProcess>>
 WORKER_TYPE: 'docker'
 DOCKER:
   # default localhost, docker manager's url

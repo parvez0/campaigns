@@ -1,4 +1,4 @@
-FROM node:14.4.0
+FROM node:carbon
 WORKDIR /app
 COPY . /app
 # Installing only production dependencies

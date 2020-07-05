@@ -4,7 +4,7 @@ const path = require('path');
 
 const multer = require('multer');
 const auth = require('../middlewares/auth');
-const { verifyUser, signup, logout, createFileUploadJobProfile } = require('../models/index');
+const { verifyUser, signup, logout, createFileUploadJobProfile, verifyUploadedFile } = require('../models/index');
 
 const multerStorage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -18,7 +18,16 @@ const multerStorage = multer.diskStorage({
     }
 });
 
-const uploadHandler = multer({ storage: multerStorage });
+const multerFileValidation = (req, file, cb) => {
+    if(file.mimetype === 'text/csv'){
+        cb(null, true);
+    }else{
+        cb(null, false);
+        return cb(new Error(`Only .csv file format is allowed!`));
+    }
+}
+
+const uploadHandler = multer({ storage: multerStorage, fileFilter: multerFileValidation });
 
 router.post('/login', async (req, res) => {
     try{
@@ -64,10 +73,17 @@ router.get('/verify-auth', auth, async (req, res) => {
 
 router.post('/file-upload', auth, uploadHandler.single('audienceFile'), async (req, res) => {
     try{
+        if(!req.file){
+            return res.publish(false, 'Failed', { message: `Required field audienceFile is not provided`}, 400);
+        }
+        await verifyUploadedFile(req.file.path);
         await createFileUploadJobProfile(req.file, req.userId, req.user);
-        res.publish(true, 'Success', { message: `File uploaded successfully, worker will be assigned shortly for pushing data to the database` }, 201);
+        return res.publish(true, 'Success', { message: `File uploaded successfully, worker will be assigned shortly for pushing data to the database` }, 201);
     }catch (e) {
-        res.publish(false, 'Failed', { message: `File uploaded successfully, but there was a problem while creating a worker please try again` }, 422);
+        if(e.statusCode()){
+            return res.publish(false, 'Failed', { message: e.message }, e.statusCode());
+        }
+        return res.publish(false, 'Failed', { message: `File uploaded successfully, but there was a problem while creating a worker please try again` }, 422);
     }
 });
 
