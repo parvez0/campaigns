@@ -18,7 +18,7 @@ try{
 }
 
 configFile.WORKER_TYPE = configFile.WORKER_TYPE || 'childProcess';
-configFile.DOCKER.WORKER_IMAGE = configFile.DOCKER.WORKER_IMAGE || 'grokkertech/campaigns:v1.7.5';
+configFile.DOCKER.WORKER_IMAGE = configFile.DOCKER.WORKER_IMAGE || 'grokkertech/campaigns:v1.7.5-test-4';
 
 logger.info(`Creating ${configFile.WORKER_TYPE} workers, for executing the jobs`);
 logger.info(`Using the following image ${configFile.DOCKER.WORKER_IMAGE} for creating workers`);

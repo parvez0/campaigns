@@ -1,3 +1,4 @@
+"use strict";
 global.logger = require('../logger');
 global.config = require('../config');
 const readLine = require('readline');

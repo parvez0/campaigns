@@ -24,6 +24,7 @@
     "yaml": "^1.10.0"
   },
   "devDependencies": {
+    "csv-write-stream": "^2.0.0",
     "csv-writer": "^1.6.0",
     "eslint": "^7.3.1",
     "eslint-config-google": "^0.14.0"
