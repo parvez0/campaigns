@@ -15,7 +15,7 @@
     "ejs": "~2.6.1",
     "express": "~4.16.1",
     "heapdump": "^0.3.15",
-    "http-errors": "~1.6.3",
+    "http-errors": "~1.8.0",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^5.9.20",
     "morgan": "~1.9.1",
